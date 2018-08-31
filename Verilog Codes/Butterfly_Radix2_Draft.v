@@ -1,0 +1,84 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: MSIS LAB
+// Engineer: Hossam Hassan
+// 
+// CreateDate: 11:49:02 05/28/2015 
+//Design Name: 
+// Module Name: Butterfly_Radix2 
+// Project Name: 
+// TargetDevices: 
+// Tool versions: 
+//Description: 
+//
+//Dependencies: 
+//
+// Revision: 
+// Revision 0.01 - File Created
+// Additional Comments: 
+//
+//////////////////////////////////////////////////////////////////////////////////
+module Butterfly_Radix2
+//=============================================================================	
+//========================= ParametersDeclarations ===========================		
+//=============================================================================
+#(
+ // The width of the input, output and twiddle factors.
+ parameter DataWidth = 16
+ )
+//=============================================================================
+//======================== InputsDeclarations ============================
+//============================================================================= 
+(
+input  wire  			clk,// System clock
+input  wire  			reset,// Asynchronous reset
+input  wire  			Start,// Start Butterfly
+output wire  			Done, //Done Butterfly
+input  wire signed [DataWidth-1 :0] X0_Re,
+input  wire signed [DataWidth-1 :0] X0_Im,
+input  wire signed [DataWidth-1 :0] X1_Re,
+input  wire signed [DataWidth-1 :0] X1_Im,
+output wire signed [DataWidth-1 :0] Y0_Re,
+output wire signed [DataWidth-1 :0] Y0_Im,
+output wire signed [DataWidth-1 :0] Y1_Re,
+output wire signed [DataWidth-1 :0] Y1_Im
+);
+// Double length product
+wire signed 	[15:0] sin, cos;
+assign sin = 0;
+assign cos = 1;
+//Addition Operation
+wire signed [DataWidth :0] Y0_Re_Add = X0_Re + X1_Re;//xr[i1] <= xr[i1] + xr[i2];
+wire signed [DataWidth :0] Y0_Im_Add = X0_Im + X1_Im;//xi[i1] <= xi[i1] + xi[i2];
+//Subtraction Operation
+wire signed [DataWidth :0] Y0_Re_Sub = X0_Re - X1_Re;//tr = xr[i1] - xr[i2];
+wire signed [DataWidth :0] Y0_Im_Sub = X0_Im - X1_Im;//ti = xi[i1] - xi[i2];
+//Add
+//assign Y0_Re_Add = X0_Re + X1_Re;//xr[i1] <= xr[i1] + xr[i2];
+//assign Y0_Im_Add = X0_Im + X1_Im;//xi[i1] <= xi[i1] + xi[i2];
+//Sub
+//assign Y0_Re_Sub = X0_Re - X1_Re;//tr = xr[i1] - xr[i2];
+//assign Y0_Im_Sub = X0_Im - X1_Im;//ti = xi[i1] - xi[i2];
+
+//Output the Addition
+assign Y0_Re [DataWidth-1 :0] = Y0_Re_Add [DataWidth:1];
+assign Y0_Im [DataWidth-1 :0] = Y0_Im_Add [DataWidth:1];
+
+//Twiddle_Factor_Cos_Sin = cos(2*pi*(1/N)*(0:N/2-1))-j*sin(2*pi*(1/N)*(0:N/2-1))
+//x(n+k+(Levels/2)+1) = (A-B)*Twiddle_Factor_Level(n+1); % DIF
+//Cos
+wire signed [(DataWidth*2)-1 :0] Cos_Re_Mul = cos * Y0_Re_Sub;//cos_tr = cos * tr;
+wire signed [(DataWidth*2)-1 :0] Cos_Im_Mul = cos * Y0_Im_Sub;//cos_ti = cos * ti; 
+//Sin
+wire signed [(DataWidth*2)-1 :0] Sin_Re_Mul = sin * Y0_Re_Sub;//sin_tr = sin * tr;
+wire signed [(DataWidth*2)-1:0] Sin_Im_Mul = sin * Y0_Im_Sub;//sin_ti = sin * ti;
+
+//assign zbw_im = (zbw_m1 >>> (X_WDTH-2)) + (zbw_m2 >>> (X_WDTH-2)); WAY FOR DOWN SHIFT
+
+//assign Y1_Re = Cos_Re_Mul [(DataWidth*2)-1 :DataWidth] +  Sin_Im_Mul [(DataWidth*2)-1 :DataWidth]; //xr[i2] <= (cos_tr >>> 14) + (sin_ti >>> 14);
+//assign Y1_Im = Cos_Im_Mul [(DataWidth*2)-1 :DataWidth] -  Sin_Re_Mul [(DataWidth*2)-1 :DataWidth]; //xi[i2] <= (cos_ti >>> 14) - (sin_tr >>> 14);
+
+assign Y1_Re = (Cos_Re_Mul >>> (DataWidth-2)) +  (Sin_Im_Mul >>> (DataWidth-2)); //xr[i2] <= (cos_tr >>> 14) + (sin_ti >>> 14);
+assign Y1_Im = (Cos_Im_Mul >>> (DataWidth-2)) -  (Sin_Re_Mul >>> (DataWidth-2)); //xi[i2] <= (cos_ti >>> 14) - (sin_tr >>> 14);
+
+endmodule
